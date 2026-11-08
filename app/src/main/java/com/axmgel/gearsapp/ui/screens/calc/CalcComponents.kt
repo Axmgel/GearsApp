@@ -35,6 +35,8 @@ import com.axmgel.gearsapp.core.calc.CalcStep
 import com.axmgel.gearsapp.core.calc.TrainSolution
 import com.axmgel.gearsapp.core.calc.fmt
 import com.axmgel.gearsapp.core.machine.Machine
+import com.axmgel.gearsapp.core.report.Report
+import com.axmgel.gearsapp.report.ReportButtons
 import com.axmgel.gearsapp.ui.screens.AppScaffold
 import com.axmgel.gearsapp.ui.screens.LoadingScreen
 import kotlinx.coroutines.Dispatchers
@@ -61,6 +63,7 @@ fun <M : Machine, R : Any> CalcScreen(
     inputs: @Composable (M) -> Unit,
     compute: (M) -> R,
     results: @Composable (R) -> Unit,
+    report: (M, R) -> Report,
 ) {
     AppScaffold(title = title, onBack = onBack) { padding ->
         if (machines == null) {
@@ -135,7 +138,10 @@ fun <M : Machine, R : Any> CalcScreen(
                 }
             }
             error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-            result?.let { results(it) }
+            result?.let {
+                results(it)
+                ReportButtons(report(machine, it))
+            }
         }
     }
 }

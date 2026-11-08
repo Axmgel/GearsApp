@@ -1,3 +1,5 @@
 <resources>
-    <style name="Theme.GearsApp" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.GearsApp" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/background</item>
+    </style>
 </resources>

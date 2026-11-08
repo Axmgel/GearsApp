@@ -33,4 +33,15 @@ class ReportTest {
         val r = Reports.indexing(listOf("Máquina" to "F"), Indexing.compute(127, DividingHeadMill("1", "F")))
         assertTrue(r.sections.any { it.heading == "División diferencial" })
     }
+
+    @Test
+    fun impresionConNombreYComentariosSinExplicacion() {
+        val r = Reports.gear("Engrane recto", listOf("Módulo" to "2"), SpurGear.compute(2.0, 30))
+            .forPrint("  Piñón de avances ", "Acero 4140, templar después.")
+        val text = Reports.toText(r)
+        assertTrue(text.startsWith("Piñón de avances\nEngrane recto"))
+        assertTrue(text.contains("Comentarios\nAcero 4140, templar después."))
+        assertTrue(!text.contains(Reports.STEPS_HEADING))
+        assertTrue(text.contains("Medidas"))
+    }
 }

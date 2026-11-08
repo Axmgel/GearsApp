@@ -10,6 +10,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -25,6 +27,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.axmgel.gearsapp.core.calc.fmt
 import com.axmgel.gearsapp.core.gear.BevelGear
+import com.axmgel.gearsapp.core.gear.DiameterKind
+import com.axmgel.gearsapp.core.gear.ModuleFinder
+import com.axmgel.gearsapp.core.gear.ModuleSearch
 import com.axmgel.gearsapp.core.gear.GearResult
 import com.axmgel.gearsapp.core.gear.HelicalGear
 import com.axmgel.gearsapp.core.gear.SpurGear
@@ -32,6 +37,7 @@ import com.axmgel.gearsapp.core.gear.ToothSystem
 import com.axmgel.gearsapp.core.report.Reports
 import com.axmgel.gearsapp.report.ReportButtons
 import com.axmgel.gearsapp.ui.screens.AppScaffold
+import kotlin.math.abs
 
 enum class GearKind(val title: String, val intro: String) {
     SPUR("Engranes rectos", "Medidas para tornear y fresar un engrane de dientes rectos con el sistema de módulo."),
@@ -49,6 +55,9 @@ class GearLinks(
 
 @Composable
 fun GearScreen(kind: GearKind, links: GearLinks, onBack: () -> Unit) {
+    var byDiameter by rememberSaveable { mutableStateOf(false) }
+    var diameterKind by rememberSaveable { mutableStateOf(DiameterKind.PITCH) }
+    var diameter by rememberSaveable { mutableStateOf("") }
     var module by rememberSaveable { mutableStateOf("") }
     var teeth by rememberSaveable { mutableStateOf("") }
     var mate by rememberSaveable { mutableStateOf("") }
@@ -60,10 +69,19 @@ fun GearScreen(kind: GearKind, links: GearLinks, onBack: () -> Unit) {
     var dedendum by rememberSaveable { mutableStateOf("1.25") }
     var advanced by rememberSaveable { mutableStateOf(false) }
     var result by remember { mutableStateOf<GearResult?>(null) }
+    var search by remember { mutableStateOf<ModuleSearch?>(null) }
+    // Diámetro que se buscó antes de pasar a "por módulo", para comparar.
+    var searched by remember { mutableStateOf<Pair<DiameterKind, Double>?>(null) }
     var errorText by rememberSaveable { mutableStateOf<String?>(null) }
 
     val bevel = kind == GearKind.BEVEL || kind == GearKind.SPIRAL_BEVEL
     val helical = kind == GearKind.HELICAL || kind == GearKind.SPIRAL_BEVEL
+
+    fun system() = ToothSystem(
+        pressureAngleDeg = parseDecimal(pressure) ?: error("Escribe el ángulo de presión."),
+        addendum = parseDecimal(addendum) ?: error("Escribe el coeficiente de cabeza."),
+        dedendum = parseDecimal(dedendum) ?: error("Escribe el coeficiente de pie."),
+    )
 
     fun calculate() {
         errorText = null
@@ -71,14 +89,9 @@ fun GearScreen(kind: GearKind, links: GearLinks, onBack: () -> Unit) {
             val m = parseDecimal(module) ?: error("Escribe el módulo.")
             val z = teeth.toIntOrNull() ?: error("Escribe el número de dientes.")
             val zMate = mate.toIntOrNull()
-            val system = ToothSystem(
-                pressureAngleDeg = parseDecimal(pressure) ?: error("Escribe el ángulo de presión."),
-                addendum = parseDecimal(addendum) ?: error("Escribe el coeficiente de cabeza."),
-                dedendum = parseDecimal(dedendum) ?: error("Escribe el coeficiente de pie."),
-            )
             when (kind) {
-                GearKind.SPUR -> SpurGear.compute(m, z, zMate, system)
-                GearKind.HELICAL -> HelicalGear.compute(m, z, parseDecimal(angle) ?: error("Escribe el ángulo de hélice."), zMate, system)
+                GearKind.SPUR -> SpurGear.compute(m, z, zMate, system())
+                GearKind.HELICAL -> HelicalGear.compute(m, z, parseDecimal(angle) ?: error("Escribe el ángulo de hélice."), zMate, system())
                 GearKind.BEVEL, GearKind.SPIRAL_BEVEL -> BevelGear.compute(
                     module = m,
                     teeth = z,
@@ -86,10 +99,38 @@ fun GearScreen(kind: GearKind, links: GearLinks, onBack: () -> Unit) {
                     shaftAngleDeg = parseDecimal(shaftAngle) ?: error("Escribe el ángulo entre ejes."),
                     faceWidth = if (faceWidth.isBlank()) null else parseDecimal(faceWidth) ?: error("El largo del diente no es un número."),
                     spiralAngleDeg = if (kind == GearKind.SPIRAL_BEVEL) parseDecimal(angle) ?: error("Escribe el ángulo de espiral.") else 0.0,
-                    system = system,
+                    system = system(),
                 )
             }
         }.onFailure { errorText = it.message ?: "Revisa los datos." }.getOrNull()
+    }
+
+    fun findModule() {
+        errorText = null
+        search = runCatching {
+            val d = parseDecimal(diameter) ?: error("Escribe el diámetro.")
+            val z = teeth.toIntOrNull() ?: error("Escribe el número de dientes.")
+            when (kind) {
+                GearKind.SPUR -> ModuleFinder.spur(d, diameterKind, z, system())
+                GearKind.HELICAL -> ModuleFinder.helical(d, diameterKind, z, parseDecimal(angle) ?: error("Escribe el ángulo de hélice."), system())
+                GearKind.BEVEL, GearKind.SPIRAL_BEVEL -> ModuleFinder.bevel(
+                    d, diameterKind, z,
+                    mateTeeth = mate.toIntOrNull() ?: error("Escribe los dientes del otro engrane; se necesitan para el ángulo del cono."),
+                    shaftAngleDeg = parseDecimal(shaftAngle) ?: error("Escribe el ángulo entre ejes."),
+                    system = system(),
+                )
+            }
+        }.onFailure { errorText = it.message ?: "Revisa los datos." }.getOrNull()
+    }
+
+    /** Pasa a "por módulo" con el módulo sugerido ya puesto y calcula. */
+    fun useModule(s: ModuleSearch, m: Double, exactAngle: Double?) {
+        module = fmt(m)
+        if (exactAngle != null) angle = fmt(exactAngle, 4)
+        searched = s.kind to s.target
+        byDiameter = false
+        search = null
+        calculate()
     }
 
     AppScaffold(title = kind.title, onBack = onBack) { padding ->
@@ -103,15 +144,46 @@ fun GearScreen(kind: GearKind, links: GearLinks, onBack: () -> Unit) {
         ) {
             Text(kind.intro, style = MaterialTheme.typography.bodyMedium)
 
-            NumberInput(
-                module, { module = it },
-                label = when {
-                    bevel -> "Módulo (extremo grande)"
-                    helical -> "Módulo normal (el de la fresa)"
-                    else -> "Módulo"
-                },
-                help = "Tamaño del diente. Viene grabado en la fresa de módulo.",
-            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChip(
+                    selected = !byDiameter,
+                    onClick = { byDiameter = false; errorText = null },
+                    label = { Text("Por módulo") },
+                )
+                FilterChip(
+                    selected = byDiameter,
+                    onClick = { byDiameter = true; errorText = null; result = null },
+                    label = { Text("Por diámetro") },
+                )
+            }
+
+            if (byDiameter) {
+                Text(
+                    "Escribe el diámetro que mediste o que necesitas y te digo qué módulo es y cuáles módulos " +
+                        "normalizados (los de las fresas que sí se consiguen) quedan más cerca.",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    DiameterKind.entries.forEach { k ->
+                        FilterChip(selected = diameterKind == k, onClick = { diameterKind = k }, label = { Text(k.label) })
+                    }
+                }
+                NumberInput(
+                    diameter, { diameter = it },
+                    label = "${diameterKind.label} ${diameterKind.symbol} (mm)" + if (bevel) ", extremo grande" else "",
+                    help = if (diameterKind == DiameterKind.OUTSIDE) "Lo que mide la pieza por fuera, de punta a punta de los dientes." else "Diámetro donde se tocan los dos engranes.",
+                )
+            } else {
+                NumberInput(
+                    module, { module = it },
+                    label = when {
+                        bevel -> "Módulo (extremo grande)"
+                        helical -> "Módulo normal (el de la fresa)"
+                        else -> "Módulo"
+                    },
+                    help = "Tamaño del diente. Viene grabado en la fresa de módulo.",
+                )
+            }
             NumberInput(teeth, { teeth = it.filter(Char::isDigit) }, "Número de dientes (Z)", decimal = false)
             NumberInput(
                 mate, { mate = it.filter(Char::isDigit) },
@@ -128,7 +200,9 @@ fun GearScreen(kind: GearKind, links: GearLinks, onBack: () -> Unit) {
             }
             if (bevel) {
                 NumberInput(shaftAngle, { shaftAngle = it }, "Ángulo entre ejes (grados)", "Casi siempre 90°.")
-                NumberInput(faceWidth, { faceWidth = it }, "Largo del diente (mm, opcional)", "Si lo dejas vacío se usa un tercio de la generatriz.")
+                if (!byDiameter) {
+                    NumberInput(faceWidth, { faceWidth = it }, "Largo del diente (mm, opcional)", "Si lo dejas vacío se usa un tercio de la generatriz.")
+                }
             }
 
             TextButton(onClick = { advanced = !advanced }) {
@@ -140,10 +214,22 @@ fun GearScreen(kind: GearKind, links: GearLinks, onBack: () -> Unit) {
                 NumberInput(dedendum, { dedendum = it }, "Pie ÷ módulo", "1.25 en la norma ISO. Algunos libros usan 1.167.")
             }
 
-            Button(onClick = { calculate() }, modifier = Modifier.fillMaxWidth()) { Text("Calcular") }
+            if (byDiameter) {
+                Button(onClick = { findModule() }, modifier = Modifier.fillMaxWidth()) { Text("Buscar módulo") }
+            } else {
+                Button(onClick = { searched = null; calculate() }, modifier = Modifier.fillMaxWidth()) { Text("Calcular") }
+            }
             errorText?.let { Text(it, color = MaterialTheme.colorScheme.error) }
 
-            result?.let { r ->
+            if (byDiameter) {
+                search?.let { s ->
+                    ModuleSuggestions(s, helical && !bevel) { m, exactAngle -> useModule(s, m, exactAngle) }
+                    StepsCard(s.steps)
+                }
+            }
+
+            if (!byDiameter) result?.let { r ->
+                searched?.let { (k, target) -> ComparisonCard(r, k, target) }
                 DimsCard(r)
                 StepsCard(r.steps)
                 val inputs = buildList {
@@ -154,6 +240,7 @@ fun GearScreen(kind: GearKind, links: GearLinks, onBack: () -> Unit) {
                     if (bevel) add("Ángulo entre ejes" to "$shaftAngle°")
                     add("Ángulo de presión" to "$pressure°")
                     add("Cabeza / pie (× módulo)" to "$addendum / $dedendum")
+                    searched?.let { (k, target) -> add("${k.label} buscado" to "${fmt(target, 3)} mm") }
                 }
                 ReportButtons(Reports.gear(kind.title, inputs, r))
                 Text("Siguiente paso: maquinar", style = MaterialTheme.typography.titleMedium)
@@ -174,6 +261,56 @@ fun GearScreen(kind: GearKind, links: GearLinks, onBack: () -> Unit) {
                     }
                 }
             }
+        }
+    }
+}
+
+/** Módulos normalizados sugeridos; al tocar uno se calcula el engrane con ese módulo. */
+@Composable
+private fun ModuleSuggestions(search: ModuleSearch, showExactAngle: Boolean, onUse: (Double, Double?) -> Unit) {
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Módulo calculado: ${fmt(search.exactModule, 4)}", style = MaterialTheme.typography.titleMedium)
+            Text("Módulos normalizados más cercanos. Toca uno para calcular el engrane con él.", style = MaterialTheme.typography.bodySmall)
+            search.suggestions.forEach { s ->
+                val sign = if (s.difference >= 0) "+" else ""
+                OutlinedButton(onClick = { onUse(s.module, null) }, modifier = Modifier.fillMaxWidth()) {
+                    Column(Modifier.fillMaxWidth()) {
+                        Text("Módulo ${fmt(s.module)}" + if (s.series == 1) "  (serie preferida)" else "  (serie 2)", fontWeight = FontWeight.SemiBold)
+                        Text(
+                            "${search.kind.symbol} = ${fmt(s.diameter, 3)} mm  ($sign${fmt(s.difference, 3)} mm)",
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                }
+                val exact = s.exactHelixAngleDeg
+                if (showExactAngle && exact != null && abs(s.difference) > 1e-6) {
+                    TextButton(onClick = { onUse(s.module, exact) }) {
+                        Text("o con módulo ${fmt(s.module)} y β = ${fmt(exact, 3)}° para el diámetro exacto")
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** Compara el diámetro que se buscó con el que sale con el módulo elegido. */
+@Composable
+private fun ComparisonCard(result: GearResult, kind: DiameterKind, target: Double) {
+    val got = result.dims.firstOrNull { it.symbol == kind.symbol }?.value ?: return
+    val diff = got - target
+    Card(
+        Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer),
+    ) {
+        Column(Modifier.padding(16.dp)) {
+            Text("Comparación con lo que buscaste", style = MaterialTheme.typography.titleMedium)
+            Text("${kind.label} buscado: ${fmt(target, 3)} mm")
+            Text("${kind.label} con este módulo: ${fmt(got, 3)} mm")
+            Text(
+                "Cambio: ${if (diff >= 0) "+" else ""}${fmt(diff, 3)} mm (${if (diff >= 0) "+" else ""}${fmt(diff / target * 100, 2)} %)",
+                fontWeight = FontWeight.SemiBold,
+            )
         }
     }
 }

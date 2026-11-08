@@ -67,7 +67,12 @@ object PdfExporter {
         }
 
         val date = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date())
-        draw(report.title, titlePaint)
+        if (report.name.isNotEmpty()) {
+            draw(report.name, titlePaint)
+            draw(report.title, headPaint, 2f)
+        } else {
+            draw(report.title, titlePaint)
+        }
         draw(date, smallPaint, 2f)
         if (report.inputs.isNotEmpty()) {
             draw("Datos", headPaint, 12f)
@@ -77,10 +82,14 @@ object PdfExporter {
             draw(section.heading, headPaint, 14f)
             section.lines.forEach { draw(it, bodyPaint, 4f) }
         }
+        if (report.comments.isNotEmpty()) {
+            draw("Comentarios", headPaint, 14f)
+            draw(report.comments, bodyPaint, 4f)
+        }
         page?.let { doc.finishPage(it) }
 
         val dir = File(context.cacheDir, "reportes").apply { mkdirs() }
-        val safe = report.title.replace(Regex("[^A-Za-z0-9áéíóúñÁÉÍÓÚÑ ]"), "").trim().replace(' ', '_').ifEmpty { "calculo" }
+        val safe = report.name.ifEmpty { report.title }.replace(Regex("[^A-Za-z0-9áéíóúñÁÉÍÓÚÑ ]"), "").trim().replace(' ', '_').ifEmpty { "calculo" }
         val file = File(dir, "$safe.pdf")
         FileOutputStream(file).use { doc.writeTo(it) }
         doc.close()

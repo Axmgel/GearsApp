@@ -8,12 +8,25 @@ import com.axmgel.gearsapp.core.calc.TrainSolution
 import com.axmgel.gearsapp.core.calc.fmt
 import com.axmgel.gearsapp.core.gear.GearResult
 
-/** Hoja de cálculo para imprimir: datos de entrada, resultados y explicación. */
+/**
+ * Hoja de cálculo para imprimir: datos de entrada, resultados y explicación.
+ * @property name nombre que el usuario le pone a la pieza (por ejemplo "Piñón de la caja de avances").
+ * @property comments notas libres del usuario.
+ */
 data class Report(
     val title: String,
     val inputs: List<Pair<String, String>>,
     val sections: List<ReportSection>,
-)
+    val name: String = "",
+    val comments: String = "",
+) {
+    /** Lo que se imprime: con nombre y comentarios, y sin la explicación "Cómo se calcula". */
+    fun forPrint(name: String, comments: String): Report = copy(
+        name = name.trim(),
+        comments = comments.trim(),
+        sections = sections.filterNot { it.heading == Reports.STEPS_HEADING },
+    )
+}
 
 data class ReportSection(val heading: String, val lines: List<String>)
 
@@ -23,8 +36,10 @@ object Reports {
     /** Máximo de combinaciones de engranes que se imprimen. */
     const val MAX_TRAINS = 20
 
+    const val STEPS_HEADING = "Cómo se calcula"
+
     private fun stepsSection(steps: List<CalcStep>) = ReportSection(
-        "Cómo se calcula",
+        STEPS_HEADING,
         steps.mapIndexed { i, s -> "${i + 1}. ${s.title}: ${s.detail}" },
     )
 
@@ -100,6 +115,7 @@ object Reports {
 
     /** Versión en texto plano, por si se quiere copiar o mandar por mensaje. */
     fun toText(report: Report): String = buildString {
+        if (report.name.isNotEmpty()) appendLine(report.name)
         appendLine(report.title)
         appendLine()
         report.inputs.forEach { (k, v) -> appendLine("$k: $v") }
@@ -107,6 +123,11 @@ object Reports {
             appendLine()
             appendLine(s.heading)
             s.lines.forEach { appendLine(it) }
+        }
+        if (report.comments.isNotEmpty()) {
+            appendLine()
+            appendLine("Comentarios")
+            appendLine(report.comments)
         }
     }.trimEnd()
 }

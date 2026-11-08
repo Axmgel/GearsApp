@@ -24,7 +24,17 @@ import com.axmgel.gearsapp.ui.screens.calc.IndexingScreen
 import com.axmgel.gearsapp.ui.screens.LoadingScreen
 import com.axmgel.gearsapp.ui.screens.MachineEditScreen
 import com.axmgel.gearsapp.ui.screens.MachinesScreen
+import com.axmgel.gearsapp.ui.screens.EntryStyle
 import com.axmgel.gearsapp.ui.screens.MenuEntry
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ChangeHistory
+import androidx.compose.material.icons.filled.Loop
+import androidx.compose.material.icons.filled.PrecisionManufacturing
+import androidx.compose.material.icons.filled.RotateRight
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.filled.TrackChanges
+import androidx.compose.material.icons.filled.Tune
 import com.axmgel.gearsapp.ui.screens.MenuScreen
 import com.axmgel.gearsapp.ui.screens.MenuSection
 import com.axmgel.gearsapp.ui.screens.newMachine
@@ -82,9 +92,14 @@ fun GearsNavHost() {
                     MenuSection(
                         title = null,
                         entries = listOf(
-                            MenuEntry("Cálculo de engranes", "Rectos, helicoidales, cónicos y cónicos helicoidales") { nav.navigate(Routes.GEARS) },
-                            MenuEntry("Cálculo de maquinaria", "Generadora y cabezal divisor") { nav.navigate(Routes.MACHINING) },
-                            MenuEntry("Configurar máquinas", "Captura los datos de las máquinas de tu taller") { nav.navigate(Routes.MACHINES) },
+                            MenuEntry("Cálculo de engranes", "Rectos, helicoidales, cónicos y cónicos helicoidales", Icons.Filled.Settings) { nav.navigate(Routes.GEARS) },
+                            MenuEntry("Cálculo de maquinaria", "Generadora y cabezal divisor", Icons.Filled.PrecisionManufacturing) { nav.navigate(Routes.MACHINING) },
+                        ),
+                    ),
+                    MenuSection(
+                        title = "Tu taller",
+                        entries = listOf(
+                            MenuEntry("Configurar máquinas", "Captura los datos de las máquinas de tu taller", Icons.Filled.Tune, EntryStyle.SETTINGS) { nav.navigate(Routes.MACHINES) },
                         ),
                     ),
                 ),
@@ -99,10 +114,10 @@ fun GearsNavHost() {
                     MenuSection(
                         title = null,
                         entries = listOf(
-                            MenuEntry("Rectos", "Dientes paralelos al eje") { nav.navigate(Routes.gear(GearKind.SPUR)) },
-                            MenuEntry("Helicoidales", "Dientes inclinados con un ángulo de hélice") { nav.navigate(Routes.gear(GearKind.HELICAL)) },
-                            MenuEntry("Cónicos", "Ejes que se cruzan, dientes rectos") { nav.navigate(Routes.gear(GearKind.BEVEL)) },
-                            MenuEntry("Cónicos helicoidales", "Ejes que se cruzan, dientes curvos o inclinados") { nav.navigate(Routes.gear(GearKind.SPIRAL_BEVEL)) },
+                            MenuEntry("Rectos", "Dientes paralelos al eje", Icons.Filled.Settings) { nav.navigate(Routes.gear(GearKind.SPUR)) },
+                            MenuEntry("Helicoidales", "Dientes inclinados con un ángulo de hélice", Icons.Filled.RotateRight) { nav.navigate(Routes.gear(GearKind.HELICAL)) },
+                            MenuEntry("Cónicos", "Ejes que se cruzan, dientes rectos", Icons.Filled.ChangeHistory) { nav.navigate(Routes.gear(GearKind.BEVEL)) },
+                            MenuEntry("Cónicos helicoidales", "Ejes que se cruzan, dientes curvos o inclinados", Icons.Filled.Loop) { nav.navigate(Routes.gear(GearKind.SPIRAL_BEVEL)) },
                         ),
                     ),
                 ),
@@ -117,15 +132,15 @@ fun GearsNavHost() {
                     MenuSection(
                         title = "Generadora",
                         entries = listOf(
-                            MenuEntry("Sincronización", "Tren de engranes para el número de divisiones") { nav.navigate(Routes.HOB_SYNC) },
-                            MenuEntry("Tren de hélice", "Engranes para el ángulo de hélice") { nav.navigate(Routes.hobHelix()) },
+                            MenuEntry("Sincronización", "Tren de engranes para el número de divisiones", Icons.Filled.Sync) { nav.navigate(Routes.HOB_SYNC) },
+                            MenuEntry("Tren de hélice", "Engranes para el ángulo de hélice", Icons.Filled.RotateRight) { nav.navigate(Routes.hobHelix()) },
                         ),
                     ),
                     MenuSection(
                         title = "Cabezal divisor",
                         entries = listOf(
-                            MenuEntry("Encontrador de puntos para divisiones", "Vueltas y agujeros del plato divisor") { nav.navigate(Routes.indexing()) },
-                            MenuEntry("Sincronización helicoidal", "Engranes entre la mesa y el cabezal para cortar una hélice") { nav.navigate(Routes.helicalMilling()) },
+                            MenuEntry("Encontrador de puntos para divisiones", "Vueltas y agujeros del plato divisor", Icons.Filled.TrackChanges) { nav.navigate(Routes.indexing()) },
+                            MenuEntry("Sincronización helicoidal", "Engranes entre la mesa y el cabezal para cortar una hélice", Icons.Filled.Loop) { nav.navigate(Routes.helicalMilling()) },
                         ),
                     ),
                 ),

@@ -29,6 +29,8 @@ import com.axmgel.gearsapp.core.gear.GearResult
 import com.axmgel.gearsapp.core.gear.HelicalGear
 import com.axmgel.gearsapp.core.gear.SpurGear
 import com.axmgel.gearsapp.core.gear.ToothSystem
+import com.axmgel.gearsapp.core.report.Reports
+import com.axmgel.gearsapp.report.ReportButtons
 import com.axmgel.gearsapp.ui.screens.AppScaffold
 
 enum class GearKind(val title: String, val intro: String) {
@@ -144,6 +146,16 @@ fun GearScreen(kind: GearKind, links: GearLinks, onBack: () -> Unit) {
             result?.let { r ->
                 DimsCard(r)
                 StepsCard(r.steps)
+                val inputs = buildList {
+                    add("Módulo" to module)
+                    add("Dientes" to teeth)
+                    if (mate.isNotBlank()) add("Dientes del otro engrane" to mate)
+                    if (helical) add((if (bevel) "Ángulo de espiral" else "Ángulo de hélice") to "$angle°")
+                    if (bevel) add("Ángulo entre ejes" to "$shaftAngle°")
+                    add("Ángulo de presión" to "$pressure°")
+                    add("Cabeza / pie (× módulo)" to "$addendum / $dedendum")
+                }
+                ReportButtons(Reports.gear(kind.title, inputs, r))
                 Text("Siguiente paso: maquinar", style = MaterialTheme.typography.titleMedium)
                 OutlinedButton(onClick = { links.toIndexing(r.teeth) }, modifier = Modifier.fillMaxWidth()) {
                     Text("Divisiones en el cabezal (${r.teeth})")

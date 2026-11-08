@@ -27,3 +27,7 @@ Para correr sólo las pruebas de los cálculos (no necesita el SDK de Android):
    (encontrador de puntos y sincronización helicoidal).
 3. Cálculo de engranes: rectos, helicoidales, cónicos y cónicos helicoidales, con explicación paso a paso.
 4. Imprimir el cálculo a PDF y preparar la publicación en Play Store.
+
+## Publicar
+
+Ver [PUBLICAR.md](PUBLICAR.md).

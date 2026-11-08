@@ -22,6 +22,7 @@ import com.axmgel.gearsapp.core.calc.Indexing
 import com.axmgel.gearsapp.core.calc.fmt
 import com.axmgel.gearsapp.core.machine.DividingHeadMill
 import com.axmgel.gearsapp.core.machine.GearHobber
+import com.axmgel.gearsapp.core.report.Reports
 
 private const val NO_MILL = "No tienes ninguna fresadora con cabezal divisor. Agrégala en Configurar máquinas."
 private const val NO_HOBBER = "No tienes ninguna generadora. Agrégala en Configurar máquinas."
@@ -41,7 +42,13 @@ fun HelicalMillingScreen(
     var angle by rememberSaveable { mutableStateOf("") }
     var tolerance by rememberSaveable { mutableStateOf("0.01") }
 
-    data class Out(val leadSteps: List<CalcStep>, val result: HelicalMilling.Result, val angle: Double?)
+    data class Out(val steps: List<CalcStep>, val result: HelicalMilling.Result, val inputs: List<Pair<String, String>>)
+
+    fun tableStep(angleDeg: Double) = CalcStep(
+        "Inclinar la mesa",
+        "Gira la mesa de la fresadora ${fmt(angleDeg, 4)}° (el ángulo de la hélice). Hacia la izquierda para hélice " +
+            "derecha y hacia la derecha para hélice izquierda, viendo la máquina de frente.",
+    )
 
     CalcScreen(
         title = "Sincronización helicoidal",
@@ -71,27 +78,33 @@ fun HelicalMillingScreen(
         },
         compute = { mill ->
             val tol = toleranceFraction(tolerance)
+            val machineInput = listOf("Máquina" to mill.name, "Error permitido" to "$tolerance %")
             if (byDiameter) {
                 val d = parseDecimal(diameter) ?: error("Escribe el diámetro.")
                 val a = parseDecimal(angle) ?: error("Escribe el ángulo.")
                 val l = HelicalMilling.leadFromDiameter(d, a)
-                Out(HelicalMilling.leadSteps(d, a), HelicalMilling.compute(l, mill, tol), a)
+                val r = HelicalMilling.compute(l, mill, tol)
+                Out(
+                    HelicalMilling.leadSteps(d, a) + r.steps + tableStep(a),
+                    r,
+                    machineInput + listOf("Diámetro primitivo" to "${fmt(d)} mm", "Ángulo de la hélice" to "${fmt(a)}°"),
+                )
             } else {
                 val l = parseDecimal(lead) ?: error("Escribe el paso de la hélice.")
-                Out(emptyList(), HelicalMilling.compute(l, mill, tol), parseDecimal(leadAngle))
+                val a = parseDecimal(leadAngle)
+                val r = HelicalMilling.compute(l, mill, tol)
+                Out(
+                    r.steps + listOfNotNull(a?.let { tableStep(it) }),
+                    r,
+                    machineInput + listOfNotNull(a?.let { "Ángulo de la hélice" to "${fmt(it)}°" }),
+                )
             }
         },
         results = { out ->
-            val extraStep = out.angle?.let {
-                CalcStep(
-                    "Inclinar la mesa",
-                    "Gira la mesa de la fresadora ${fmt(it, 4)}° (el ángulo de la hélice). Hacia la izquierda para hélice " +
-                        "derecha y hacia la derecha para hélice izquierda, viendo la máquina de frente.",
-                )
-            }
-            StepsCard(out.leadSteps + out.result.steps + listOfNotNull(extraStep))
+            StepsCard(out.steps)
             TrainResults(out.result.solutions, extra = { "Paso que resulta: ${fmt(out.result.leadFor(it), 4)} mm" })
         },
+        report = { _, out -> Reports.helicalMilling(out.inputs, out.steps, out.result) },
     )
 }
 
@@ -115,6 +128,7 @@ fun IndexingScreen(machines: List<DividingHeadMill>?, onBack: () -> Unit, initia
             require(z >= 2) { "El número de divisiones debe ser 2 o más." }
             Indexing.compute(z, mill)
         },
+        report = { mill, r -> Reports.indexing(listOf("Máquina" to mill.name), r) },
         results = { r ->
             StepsCard(r.steps)
             if (r.simple.isNotEmpty()) {
@@ -173,6 +187,16 @@ fun HobberHelixScreen(
             val b = parseDecimal(angle) ?: error("Escribe el ángulo de hélice.")
             Hobbing.helixTrain(m, k, b, hob, toleranceFraction(tolerance))
         },
+        report = { hob, r ->
+            Reports.hobbing(
+                "Tren de hélice (generadora)",
+                listOf(
+                    "Máquina" to hob.name, "Módulo normal" to module, "Entradas de la fresa" to starts,
+                    "Ángulo de hélice" to "$angle°", "Error permitido" to "$tolerance %",
+                ),
+                r,
+            )
+        },
         results = { r ->
             StepsCard(r.steps)
             TrainResults(r.solutions)
@@ -214,6 +238,17 @@ fun HobberSyncScreen(machines: List<GearHobber>?, onBack: () -> Unit) {
             val k = starts.toIntOrNull() ?: error("Escribe las entradas de la fresa.")
             val c = hob.divisionConstant ?: parseDecimal(constant) ?: error("Escribe la constante de división.")
             Hobbing.indexTrain(z, k, c, hob, toleranceFraction(tolerance))
+        },
+        report = { hob, r ->
+            Reports.hobbing(
+                "Sincronización (generadora)",
+                listOf(
+                    "Máquina" to hob.name, "Dientes" to teeth, "Entradas de la fresa" to starts,
+                    "Constante de división" to (hob.divisionConstant?.let { fmt(it) } ?: constant),
+                    "Error permitido" to "$tolerance %",
+                ),
+                r,
+            )
         },
         results = { r ->
             StepsCard(r.steps)

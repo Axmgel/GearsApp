@@ -204,7 +204,7 @@ fun HobberSyncScreen(machines: List<GearHobber>?, onBack: () -> Unit) {
             } else {
                 NumberInput(
                     constant, { constant = it }, "Constante de división",
-                    "Viene en el manual de tu generadora. Guárdala en Configurar máquinas para no escribirla cada vez.",
+                    "Es la relación entre el cabezal divisor de la generadora y el chuck que sujeta la pieza (vueltas del sinfín por una vuelta del chuck). Guárdala en Configurar máquinas para no escribirla cada vez.",
                 )
             }
             ToleranceInput(tolerance) { tolerance = it }

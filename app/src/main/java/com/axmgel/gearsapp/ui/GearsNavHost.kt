@@ -11,6 +11,12 @@ import androidx.navigation.compose.rememberNavController
 import com.axmgel.gearsapp.core.machine.DividingHeadMill
 import com.axmgel.gearsapp.core.machine.GearHobber
 import com.axmgel.gearsapp.ui.screens.ComingSoonScreen
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
+import com.axmgel.gearsapp.core.calc.fmt
+import com.axmgel.gearsapp.ui.screens.calc.GearKind
+import com.axmgel.gearsapp.ui.screens.calc.GearLinks
+import com.axmgel.gearsapp.ui.screens.calc.GearScreen
 import com.axmgel.gearsapp.ui.screens.calc.HelicalMillingScreen
 import com.axmgel.gearsapp.ui.screens.calc.HobberHelixScreen
 import com.axmgel.gearsapp.ui.screens.calc.HobberSyncScreen
@@ -32,14 +38,30 @@ object Routes {
     const val MACHINE_EDIT = "maquinas/editar/{id}"
     const val MACHINE_NEW = "maquinas/nueva/{tipo}"
     const val SOON = "pronto/{titulo}"
-    const val HELICAL_MILLING = "cabezal/helicoidal"
-    const val INDEXING = "cabezal/puntos"
-    const val HOB_HELIX = "generadora/helice"
+    const val HELICAL_MILLING = "cabezal/helicoidal?paso={paso}&ang={ang}"
+    const val INDEXING = "cabezal/puntos?z={z}"
+    const val HOB_HELIX = "generadora/helice?m={m}&b={b}"
+    const val GEAR = "engrane/{tipo}"
+
+    fun gear(kind: GearKind) = "engrane/${kind.name}"
+    fun indexing(z: Int? = null) = if (z == null) "cabezal/puntos" else "cabezal/puntos?z=$z"
+    fun helicalMilling(lead: Double? = null, angle: Double? = null) =
+        if (lead == null) "cabezal/helicoidal" else "cabezal/helicoidal?paso=${fmt(lead, 4)}&ang=${fmt(angle ?: 0.0, 4)}"
+    fun hobHelix(module: Double? = null, angle: Double? = null) =
+        if (module == null) "generadora/helice" else "generadora/helice?m=${fmt(module, 6)}&b=${fmt(angle ?: 0.0, 4)}"
     const val HOB_SYNC = "generadora/sincronizacion"
 
     fun machineEdit(id: String) = "maquinas/editar/$id"
     fun machineNew(type: String) = "maquinas/nueva/$type"
     fun soon(title: String) = "pronto/${Uri.encode(title)}"
+}
+
+/** Argumentos opcionales de texto (vacíos si no se mandan). */
+private fun optionalArgs(vararg names: String) = names.map { name ->
+    navArgument(name) {
+        type = NavType.StringType
+        defaultValue = ""
+    }
 }
 
 @Composable
@@ -77,10 +99,10 @@ fun GearsNavHost() {
                     MenuSection(
                         title = null,
                         entries = listOf(
-                            MenuEntry("Rectos", "Dientes paralelos al eje") { soon("Engranes rectos") },
-                            MenuEntry("Helicoidales", "Dientes inclinados con un ángulo de hélice") { soon("Engranes helicoidales") },
-                            MenuEntry("Cónicos", "Ejes que se cruzan, dientes rectos") { soon("Engranes cónicos") },
-                            MenuEntry("Cónicos helicoidales", "Ejes que se cruzan, dientes curvos o inclinados") { soon("Engranes cónicos helicoidales") },
+                            MenuEntry("Rectos", "Dientes paralelos al eje") { nav.navigate(Routes.gear(GearKind.SPUR)) },
+                            MenuEntry("Helicoidales", "Dientes inclinados con un ángulo de hélice") { nav.navigate(Routes.gear(GearKind.HELICAL)) },
+                            MenuEntry("Cónicos", "Ejes que se cruzan, dientes rectos") { nav.navigate(Routes.gear(GearKind.BEVEL)) },
+                            MenuEntry("Cónicos helicoidales", "Ejes que se cruzan, dientes curvos o inclinados") { nav.navigate(Routes.gear(GearKind.SPIRAL_BEVEL)) },
                         ),
                     ),
                 ),
@@ -96,14 +118,14 @@ fun GearsNavHost() {
                         title = "Generadora",
                         entries = listOf(
                             MenuEntry("Sincronización", "Tren de engranes para el número de divisiones") { nav.navigate(Routes.HOB_SYNC) },
-                            MenuEntry("Tren de hélice", "Engranes para el ángulo de hélice") { nav.navigate(Routes.HOB_HELIX) },
+                            MenuEntry("Tren de hélice", "Engranes para el ángulo de hélice") { nav.navigate(Routes.hobHelix()) },
                         ),
                     ),
                     MenuSection(
                         title = "Cabezal divisor",
                         entries = listOf(
-                            MenuEntry("Encontrador de puntos para divisiones", "Vueltas y agujeros del plato divisor") { nav.navigate(Routes.INDEXING) },
-                            MenuEntry("Sincronización helicoidal", "Engranes entre la mesa y el cabezal para cortar una hélice") { nav.navigate(Routes.HELICAL_MILLING) },
+                            MenuEntry("Encontrador de puntos para divisiones", "Vueltas y agujeros del plato divisor") { nav.navigate(Routes.indexing()) },
+                            MenuEntry("Sincronización helicoidal", "Engranes entre la mesa y el cabezal para cortar una hélice") { nav.navigate(Routes.helicalMilling()) },
                         ),
                     ),
                 ),
@@ -147,14 +169,40 @@ fun GearsNavHost() {
             )
         }
 
-        composable(Routes.HELICAL_MILLING) {
-            HelicalMillingScreen(machines?.filterIsInstance<DividingHeadMill>(), onBack = { nav.popBackStack() })
+        composable(Routes.HELICAL_MILLING, arguments = optionalArgs("paso", "ang")) { entry ->
+            HelicalMillingScreen(
+                machines?.filterIsInstance<DividingHeadMill>(),
+                onBack = { nav.popBackStack() },
+                initialLead = entry.arguments?.getString("paso").orEmpty(),
+                initialAngle = entry.arguments?.getString("ang").orEmpty(),
+            )
         }
-        composable(Routes.INDEXING) {
-            IndexingScreen(machines?.filterIsInstance<DividingHeadMill>(), onBack = { nav.popBackStack() })
+        composable(Routes.INDEXING, arguments = optionalArgs("z")) { entry ->
+            IndexingScreen(
+                machines?.filterIsInstance<DividingHeadMill>(),
+                onBack = { nav.popBackStack() },
+                initialDivisions = entry.arguments?.getString("z").orEmpty(),
+            )
         }
-        composable(Routes.HOB_HELIX) {
-            HobberHelixScreen(machines?.filterIsInstance<GearHobber>(), onBack = { nav.popBackStack() })
+        composable(Routes.HOB_HELIX, arguments = optionalArgs("m", "b")) { entry ->
+            HobberHelixScreen(
+                machines?.filterIsInstance<GearHobber>(),
+                onBack = { nav.popBackStack() },
+                initialModule = entry.arguments?.getString("m").orEmpty(),
+                initialAngle = entry.arguments?.getString("b").orEmpty(),
+            )
+        }
+        composable(Routes.GEAR) { entry ->
+            val kind = runCatching { GearKind.valueOf(entry.arguments?.getString("tipo").orEmpty()) }.getOrDefault(GearKind.SPUR)
+            GearScreen(
+                kind = kind,
+                links = GearLinks(
+                    toIndexing = { nav.navigate(Routes.indexing(it)) },
+                    toHelicalMilling = { lead, angle -> nav.navigate(Routes.helicalMilling(lead, angle)) },
+                    toHobberHelix = { m, angle -> nav.navigate(Routes.hobHelix(m, angle)) },
+                ),
+                onBack = { nav.popBackStack() },
+            )
         }
         composable(Routes.HOB_SYNC) {
             HobberSyncScreen(machines?.filterIsInstance<GearHobber>(), onBack = { nav.popBackStack() })

@@ -28,9 +28,15 @@ private const val NO_HOBBER = "No tienes ninguna generadora. Agrégala en Config
 
 /** Cabezal divisor → Sincronización helicoidal. */
 @Composable
-fun HelicalMillingScreen(machines: List<DividingHeadMill>?, onBack: () -> Unit) {
+fun HelicalMillingScreen(
+    machines: List<DividingHeadMill>?,
+    onBack: () -> Unit,
+    initialLead: String = "",
+    initialAngle: String = "",
+) {
     var byDiameter by rememberSaveable { mutableStateOf(false) }
-    var lead by rememberSaveable { mutableStateOf("") }
+    var lead by rememberSaveable { mutableStateOf(initialLead) }
+    var leadAngle by rememberSaveable { mutableStateOf(initialAngle) }
     var diameter by rememberSaveable { mutableStateOf("") }
     var angle by rememberSaveable { mutableStateOf("") }
     var tolerance by rememberSaveable { mutableStateOf("0.01") }
@@ -59,6 +65,7 @@ fun HelicalMillingScreen(machines: List<DividingHeadMill>?, onBack: () -> Unit) 
                 NumberInput(angle, { angle = it }, "Ángulo de la hélice (grados)", "Inclinación del diente respecto al eje de la pieza.")
             } else {
                 NumberInput(lead, { lead = it }, "Paso de la hélice (mm)", "Lo que avanza la hélice en una vuelta completa de la pieza.")
+                NumberInput(leadAngle, { leadAngle = it }, "Ángulo de la hélice (grados, opcional)", "Si lo pones, te digo cuánto inclinar la mesa.")
             }
             ToleranceInput(tolerance) { tolerance = it }
         },
@@ -71,7 +78,7 @@ fun HelicalMillingScreen(machines: List<DividingHeadMill>?, onBack: () -> Unit) 
                 Out(HelicalMilling.leadSteps(d, a), HelicalMilling.compute(l, mill, tol), a)
             } else {
                 val l = parseDecimal(lead) ?: error("Escribe el paso de la hélice.")
-                Out(emptyList(), HelicalMilling.compute(l, mill, tol), null)
+                Out(emptyList(), HelicalMilling.compute(l, mill, tol), parseDecimal(leadAngle))
             }
         },
         results = { out ->
@@ -90,8 +97,8 @@ fun HelicalMillingScreen(machines: List<DividingHeadMill>?, onBack: () -> Unit) 
 
 /** Cabezal divisor → Encontrador de puntos para divisiones. */
 @Composable
-fun IndexingScreen(machines: List<DividingHeadMill>?, onBack: () -> Unit) {
-    var divisions by rememberSaveable { mutableStateOf("") }
+fun IndexingScreen(machines: List<DividingHeadMill>?, onBack: () -> Unit, initialDivisions: String = "") {
+    var divisions by rememberSaveable { mutableStateOf(initialDivisions) }
 
     CalcScreen(
         title = "Encontrador de puntos",
@@ -137,10 +144,15 @@ fun IndexingScreen(machines: List<DividingHeadMill>?, onBack: () -> Unit) {
 
 /** Generadora → Tren de hélice. */
 @Composable
-fun HobberHelixScreen(machines: List<GearHobber>?, onBack: () -> Unit) {
-    var module by rememberSaveable { mutableStateOf("") }
+fun HobberHelixScreen(
+    machines: List<GearHobber>?,
+    onBack: () -> Unit,
+    initialModule: String = "",
+    initialAngle: String = "",
+) {
+    var module by rememberSaveable { mutableStateOf(initialModule) }
     var starts by rememberSaveable { mutableStateOf("1") }
-    var angle by rememberSaveable { mutableStateOf("") }
+    var angle by rememberSaveable { mutableStateOf(initialAngle) }
     var tolerance by rememberSaveable { mutableStateOf("0.01") }
 
     CalcScreen(

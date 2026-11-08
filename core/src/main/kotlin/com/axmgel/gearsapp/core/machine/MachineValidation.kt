@@ -22,6 +22,8 @@ object MachineValidation {
             }
             is GearHobber -> {
                 if (machine.helixConstant <= 0.0) out += "La constante de hélice debe ser mayor que cero."
+                val dc = machine.divisionConstant
+                if (dc != null && dc <= 0.0) out += "La constante de división debe ser mayor que cero (o déjala vacía)."
             }
         }
         return out

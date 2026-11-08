@@ -68,6 +68,7 @@ fun MachineEditScreen(
     // Campos de la generadora
     val hobber = initial as? GearHobber
     var helixConstant by rememberSaveable { mutableStateOf(hobber?.let { format(it.helixConstant) } ?: "8.355615") }
+    var divisionConstant by rememberSaveable { mutableStateOf(hobber?.divisionConstant?.let { format(it) } ?: "") }
 
     var confirmDelete by remember { mutableStateOf(false) }
 
@@ -95,7 +96,14 @@ fun MachineEditScreen(
         is GearHobber -> {
             val constant = parseDecimal(helixConstant)
             if (constant == null) parseErrors += "La constante de hélice debe ser un número, por ejemplo 8.355615."
-            initial.copy(name = name.trim(), helixConstant = constant ?: 0.0, changeGears = gears.toList())
+            val division = if (divisionConstant.isBlank()) null else parseDecimal(divisionConstant)
+            if (divisionConstant.isNotBlank() && division == null) parseErrors += "La constante de división debe ser un número."
+            initial.copy(
+                name = name.trim(),
+                helixConstant = constant ?: 0.0,
+                divisionConstant = division,
+                changeGears = gears.toList(),
+            )
         }
     }
     val problems = parseErrors + MachineValidation.problems(draft)
@@ -183,6 +191,14 @@ fun MachineEditScreen(
                         label = "Constante de hélice",
                         help = "Número que da el fabricante de tu generadora para el tren de hélice. " +
                             "Viene en el manual o en la placa de la máquina.",
+                        decimal = true,
+                    )
+                    NumberField(
+                        value = divisionConstant,
+                        onChange = { divisionConstant = it },
+                        label = "Constante de división (opcional)",
+                        help = "Número del fabricante para el tren de división (sincronización). " +
+                            "Se usa así: relación = constante × entradas de la fresa ÷ número de dientes.",
                         decimal = true,
                     )
                 }

@@ -54,7 +54,7 @@ data class DividingHeadMill(
  *
  * @property helixConstant constante del tren diferencial/hélice que da el fabricante de la máquina.
  *   Se usa en la fórmula: (a/b)·(c/d) = constante · sen(β) / (módulo · entradas de la fresa).
- * @property divisionConstant constante del tren de división (sincronización) que da el fabricante.
+ * @property divisionConstant relación entre el cabezal divisor de la generadora y el chuck que sujeta la pieza.
  *   Se usa en la fórmula: (a/b)·(c/d) = constante · entradas de la fresa / número de dientes.
  *   Vacía (null) mientras el usuario no la capture.
  */

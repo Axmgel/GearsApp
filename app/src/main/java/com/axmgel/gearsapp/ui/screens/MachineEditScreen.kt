@@ -197,7 +197,7 @@ fun MachineEditScreen(
                         value = divisionConstant,
                         onChange = { divisionConstant = it },
                         label = "Constante de división (opcional)",
-                        help = "Número del fabricante para el tren de división (sincronización). " +
+                        help = "Relación entre el cabezal divisor de la generadora y el chuck que sujeta la pieza (vueltas del sinfín por una vuelta del chuck). " +
                             "Se usa así: relación = constante × entradas de la fresa ÷ número de dientes.",
                         decimal = true,
                     )

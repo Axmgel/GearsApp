@@ -8,7 +8,13 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.axmgel.gearsapp.core.machine.DividingHeadMill
+import com.axmgel.gearsapp.core.machine.GearHobber
 import com.axmgel.gearsapp.ui.screens.ComingSoonScreen
+import com.axmgel.gearsapp.ui.screens.calc.HelicalMillingScreen
+import com.axmgel.gearsapp.ui.screens.calc.HobberHelixScreen
+import com.axmgel.gearsapp.ui.screens.calc.HobberSyncScreen
+import com.axmgel.gearsapp.ui.screens.calc.IndexingScreen
 import com.axmgel.gearsapp.ui.screens.LoadingScreen
 import com.axmgel.gearsapp.ui.screens.MachineEditScreen
 import com.axmgel.gearsapp.ui.screens.MachinesScreen
@@ -26,6 +32,10 @@ object Routes {
     const val MACHINE_EDIT = "maquinas/editar/{id}"
     const val MACHINE_NEW = "maquinas/nueva/{tipo}"
     const val SOON = "pronto/{titulo}"
+    const val HELICAL_MILLING = "cabezal/helicoidal"
+    const val INDEXING = "cabezal/puntos"
+    const val HOB_HELIX = "generadora/helice"
+    const val HOB_SYNC = "generadora/sincronizacion"
 
     fun machineEdit(id: String) = "maquinas/editar/$id"
     fun machineNew(type: String) = "maquinas/nueva/$type"
@@ -85,15 +95,15 @@ fun GearsNavHost() {
                     MenuSection(
                         title = "Generadora",
                         entries = listOf(
-                            MenuEntry("Sincronización", "Tren de engranes para el número de divisiones") { soon("Sincronización de la generadora") },
-                            MenuEntry("Tren de hélice", "Engranes para el ángulo de hélice") { soon("Tren de hélice de la generadora") },
+                            MenuEntry("Sincronización", "Tren de engranes para el número de divisiones") { nav.navigate(Routes.HOB_SYNC) },
+                            MenuEntry("Tren de hélice", "Engranes para el ángulo de hélice") { nav.navigate(Routes.HOB_HELIX) },
                         ),
                     ),
                     MenuSection(
                         title = "Cabezal divisor",
                         entries = listOf(
-                            MenuEntry("Encontrador de puntos para divisiones", "Vueltas y agujeros del plato divisor") { soon("Encontrador de puntos") },
-                            MenuEntry("Sincronización helicoidal", "Engranes entre la mesa y el cabezal para cortar una hélice") { soon("Sincronización helicoidal") },
+                            MenuEntry("Encontrador de puntos para divisiones", "Vueltas y agujeros del plato divisor") { nav.navigate(Routes.INDEXING) },
+                            MenuEntry("Sincronización helicoidal", "Engranes entre la mesa y el cabezal para cortar una hélice") { nav.navigate(Routes.HELICAL_MILLING) },
                         ),
                     ),
                 ),
@@ -135,6 +145,19 @@ fun GearsNavHost() {
                 onSave = { machinesVm.save(it); nav.popBackStack() },
                 onDelete = null,
             )
+        }
+
+        composable(Routes.HELICAL_MILLING) {
+            HelicalMillingScreen(machines?.filterIsInstance<DividingHeadMill>(), onBack = { nav.popBackStack() })
+        }
+        composable(Routes.INDEXING) {
+            IndexingScreen(machines?.filterIsInstance<DividingHeadMill>(), onBack = { nav.popBackStack() })
+        }
+        composable(Routes.HOB_HELIX) {
+            HobberHelixScreen(machines?.filterIsInstance<GearHobber>(), onBack = { nav.popBackStack() })
+        }
+        composable(Routes.HOB_SYNC) {
+            HobberSyncScreen(machines?.filterIsInstance<GearHobber>(), onBack = { nav.popBackStack() })
         }
 
         composable(Routes.SOON) { entry ->

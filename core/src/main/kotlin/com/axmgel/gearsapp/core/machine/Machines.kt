@@ -54,6 +54,9 @@ data class DividingHeadMill(
  *
  * @property helixConstant constante del tren diferencial/hélice que da el fabricante de la máquina.
  *   Se usa en la fórmula: (a/b)·(c/d) = constante · sen(β) / (módulo · entradas de la fresa).
+ * @property divisionConstant constante del tren de división (sincronización) que da el fabricante.
+ *   Se usa en la fórmula: (a/b)·(c/d) = constante · entradas de la fresa / número de dientes.
+ *   Vacía (null) mientras el usuario no la capture.
  */
 @Serializable
 @SerialName("generadora")
@@ -61,6 +64,7 @@ data class GearHobber(
     override val id: String,
     override val name: String,
     val helixConstant: Double = 8.355615,
+    val divisionConstant: Double? = null,
     override val changeGears: List<ChangeGear> = DefaultGearSets.dividingHead,
 ) : Machine
 
